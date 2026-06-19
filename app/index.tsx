@@ -1,0 +1,67 @@
+import { Text, TouchableOpacity, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+
+export default function HomeScreen() {
+    return (
+        <SafeAreaView className="flex-1 bg-neutral-950">
+            {/* Header */}
+            <View className="flex-row items-center justify-between px-5 py-4">
+                <Text className="text-white text-2xl">☰</Text>
+                <Text className="text-white text-lg font-bold tracking-widest">RevDex</Text>
+                <View className="w-9 h-9 rounded-full bg-neutral-700" />
+            </View>
+
+            {/* Stat Cards */}
+            <View className="flex-row gap-3 px-5 mt-3">
+                <View className="flex-1 bg-neutral-900 rounded-2xl p-5 border border-neutral-800 justify-between" style={{ minHeight: 100 }}>
+                    <View className="flex-row items-center gap-1.5">
+                        <Text className="text-lg">🔥</Text>
+                        <Text className="text-neutral-400 text-xs font-semibold tracking-wider">CURRENT STREAK</Text>
+                    </View>
+                    <Text className="text-white text-2xl font-bold mt-3">12 Days</Text>
+                </View>
+                <View className="flex-1 bg-neutral-800 rounded-2xl p-5 border border-neutral-700 justify-between" style={{ minHeight: 100 }}>
+                    <Text className="text-neutral-400 text-xs font-semibold tracking-wider">LATEST SPOT</Text>
+                    <View className="mt-3">
+                        <Text className="text-white text-lg font-bold">911 GT3 RS</Text>
+                        <Text className="text-neutral-400 text-xs mt-1">📍 Downtown LA</Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* Camera Section */}
+            <View className="flex-1 items-center justify-center gap-6">
+                <View className="items-center gap-2">
+                    <Text className="text-white text-xl font-semibold">Ready to Snap?</Text>
+                    <Text className="text-neutral-500 text-sm">Focus. Capture. Earn Rep.</Text>
+                </View>
+
+                <TouchableOpacity
+                    className="rounded-full bg-sky-200 items-center justify-center"
+                    style={{ width: 180, height: 180, shadowColor: '#bae6fd', shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 }}
+                    activeOpacity={0.8}
+                >
+                    <Text style={{ fontSize: 64 }}>📷</Text>
+                </TouchableOpacity>
+
+                <Text className="text-neutral-600 text-xs tracking-widest font-medium">TAP TO OPEN LENS</Text>
+            </View>
+
+            {/* Bottom Tab Bar */}
+            <View className="flex-row border-t border-neutral-800 py-3">
+                <TouchableOpacity className="flex-1 items-center gap-1">
+                    <Text className="text-white text-xl">⊞</Text>
+                    <Text className="text-white text-xs font-bold tracking-wider">HOME</Text>
+                </TouchableOpacity>
+                <TouchableOpacity className="flex-1 items-center gap-1">
+                    <Text className="text-neutral-600 text-xl">🚗</Text>
+                    <Text className="text-neutral-600 text-xs font-semibold tracking-wider">COLLECTION</Text>
+                </TouchableOpacity>
+                <TouchableOpacity className="flex-1 items-center gap-1">
+                    <Text className="text-neutral-600 text-xl">⚙</Text>
+                    <Text className="text-neutral-600 text-xs font-semibold tracking-wider">SETTINGS</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    )
+}
