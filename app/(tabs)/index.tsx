@@ -1,15 +1,11 @@
 import { Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Header from '../../components/Header'
 
 export default function HomeScreen() {
     return (
         <SafeAreaView className="flex-1 bg-neutral-950">
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-5 py-4">
-                <Text className="text-white text-2xl">☰</Text>
-                <Text className="text-white text-lg font-bold tracking-widest">RevDex</Text>
-                <View className="w-9 h-9 rounded-full bg-neutral-700" />
-            </View>
+            <Header />
 
             {/* Stat Cards */}
             <View className="flex-row gap-3 px-5 mt-3">
