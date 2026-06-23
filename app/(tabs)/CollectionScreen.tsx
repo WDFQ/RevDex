@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons'
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import CarCard from '../../components/CarCard'
@@ -21,7 +22,7 @@ export default function CollectionScreen() {
             {/* Search bar */}
             <View className="flex-row items-center gap-3 px-5 mb-3">
                 <View className="flex-1 flex-row items-center bg-neutral-900 border border-neutral-800 rounded-xl px-3 h-10 gap-2">
-                    <Text className="text-neutral-500 text-base">🔍</Text>
+                    <Ionicons name="search-outline" size={16} color="#737373" />
                     <TextInput
                         placeholder="Search collection..."
                         placeholderTextColor="#737373"
@@ -29,7 +30,7 @@ export default function CollectionScreen() {
                     />
                 </View>
                 <TouchableOpacity className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 items-center justify-center">
-                    <Text className="text-neutral-400 text-base">⇅</Text>
+                    <Ionicons name="swap-vertical-outline" size={18} color="#a3a3a3" />
                 </TouchableOpacity>
             </View>
 
@@ -38,10 +39,11 @@ export default function CollectionScreen() {
                 {FILTERS.map((filter, i) => (
                     <TouchableOpacity
                         key={filter}
-                        className={`px-4 py-1.5 rounded-full border ${i === 0 ? 'bg-sky-500 border-sky-500' : 'bg-transparent border-neutral-700'}`}
+                        className={`flex-row items-center gap-1 px-4 py-1.5 rounded-full border ${i === 0 ? 'bg-sky-500 border-sky-500' : 'bg-transparent border-neutral-700'}`}
                     >
+                        {i !== 0 && <Ionicons name="ellipse" size={7} color="#a3a3a3" />}
                         <Text className={`text-xs font-semibold ${i === 0 ? 'text-white' : 'text-neutral-400'}`}>
-                            {i !== 0 && '● '}{filter}
+                            {filter}
                         </Text>
                     </TouchableOpacity>
                 ))}
@@ -67,15 +69,15 @@ export default function CollectionScreen() {
             {/* Bottom Tab Bar */}
             <View className="flex-row border-t border-neutral-800 py-3">
                 <TouchableOpacity className="flex-1 items-center gap-1">
-                    <Text className="text-neutral-600 text-xl">⊞</Text>
+                    <Ionicons name="home-outline" size={22} color="#525252" />
                     <Text className="text-neutral-600 text-xs font-semibold tracking-wider">HOME</Text>
                 </TouchableOpacity>
                 <TouchableOpacity className="flex-1 items-center gap-1">
-                    <Text className="text-white text-xl">🚗</Text>
+                    <Ionicons name="car-sport" size={22} color="#ffffff" />
                     <Text className="text-white text-xs font-bold tracking-wider">COLLECTION</Text>
                 </TouchableOpacity>
                 <TouchableOpacity className="flex-1 items-center gap-1">
-                    <Text className="text-neutral-600 text-xl">⚙</Text>
+                    <Ionicons name="settings-outline" size={22} color="#525252" />
                     <Text className="text-neutral-600 text-xs font-semibold tracking-wider">SETTINGS</Text>
                 </TouchableOpacity>
             </View>
