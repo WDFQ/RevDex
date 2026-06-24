@@ -87,22 +87,6 @@ export default function SettingsScreen() {
                 {/* Version footer */}
                 <Text className="text-neutral-600 text-xs text-center">RevDex Core v2.4.1 (Build 8902)</Text>
             </ScrollView>
-
-            {/* Bottom Tab Bar */}
-            <View className="flex-row border-t border-neutral-800 py-3">
-                <TouchableOpacity className="flex-1 items-center gap-1">
-                    <Ionicons name="home-outline" size={22} color="#525252" />
-                    <Text className="text-neutral-600 text-xs font-semibold tracking-wider">HOME</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="flex-1 items-center gap-1">
-                    <Ionicons name="car-sport-outline" size={22} color="#525252" />
-                    <Text className="text-neutral-600 text-xs font-semibold tracking-wider">COLLECTION</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="flex-1 items-center gap-1">
-                    <Ionicons name="settings" size={22} color="#ffffff" />
-                    <Text className="text-white text-xs font-bold tracking-wider">SETTINGS</Text>
-                </TouchableOpacity>
-            </View>
         </SafeAreaView>
     )
 }
