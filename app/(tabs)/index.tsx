@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons'
+import { router } from 'expo-router'
 import { Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Header from '../../components/Header'
@@ -40,6 +41,7 @@ export default function HomeScreen() {
                     className="rounded-full bg-sky-200 items-center justify-center"
                     style={{ width: 180, height: 180, shadowColor: '#bae6fd', shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 }}
                     activeOpacity={0.8}
+                    onPress={() => router.push('/CameraScreen')}
                 >
                     <Ionicons name="camera-outline" size={72} color="#0c4a6e" />
                 </TouchableOpacity>

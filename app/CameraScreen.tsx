@@ -3,7 +3,7 @@ import { router } from 'expo-router'
 import { useEffect } from 'react'
 import { Alert, View } from 'react-native'
 
-export function LensScreen() {
+export default function LensScreen() {
     // get permissions from user
     const [permission, requestPermission] = ImagePicker.useCameraPermissions()
 
@@ -17,21 +17,19 @@ export function LensScreen() {
                 Alert.alert('Permission denied', 'Camera permissions are required to take a photo.')
                 return
             }
+        }
 
-            // open camera if granted permissions
-            const result = await ImagePicker.launchCameraAsync({
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 1,
-            })
+        // open camera if granted permissions
+        const result = await ImagePicker.launchCameraAsync({
+            quality: 1,
+        })
 
-            // handle user interrupt
-            if (result.canceled) {
-                router.back()
-            } else {
-                // go to next screen if photo is taken
-                router.push({ pathname: '/CaptureCardScreen', params: { imageUri: result.assets[0].uri } })
-            }
+        // handle user interrupt
+        if (result.canceled) {
+            router.back()
+        } else {
+            // go to next screen if photo is taken
+            router.replace({ pathname: '/CaptureCardScreen', params: { imageUri: result.assets[0].uri } })
         }
     }
 
