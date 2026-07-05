@@ -8,22 +8,37 @@ import { Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacit
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { auth, db } from '../../services/firebase'
 
+// Basic email shape check: something@something.something with no spaces.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function SignupScreen() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
     async function handleSubmit() {
+        const trimmedEmail = email.trim()
+
+        // Front-end guards before hitting Firebase.
+        if (!trimmedEmail || !password) {
+            Alert.alert('Missing info', 'Please enter both your email and password.')
+            return
+        }
+        if (!EMAIL_REGEX.test(trimmedEmail)) {
+            Alert.alert('Invalid email', 'Please enter a valid email address, e.g. john@example.com.')
+            return
+        }
+
         try {
             // creates user and returns UID
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+            const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password)
             const uid = userCredential.user.uid
             // default username to simply their email prefix
-            const username = email.split('@')[0]
+            const username = trimmedEmail.split('@')[0]
             const date = new Date()
 
             await setDoc(doc(db, 'users', uid), {
                 username: username,
-                email: email,
+                email: trimmedEmail,
                 streak: 0,
                 preferences: {},
                 creationDate: date.toLocaleDateString(),
@@ -31,7 +46,15 @@ export default function SignupScreen() {
         } catch (err) {
             console.error(err)
             if (err instanceof FirebaseError) {
-                Alert.alert('Error', err.message)
+                if (err.code === 'auth/email-already-in-use') {
+                    Alert.alert('Account exists', 'An account with this email already exists. Please log in instead.')
+                } else if (err.code === 'auth/invalid-email') {
+                    Alert.alert('Invalid email', 'Please enter a valid email address.')
+                } else if (err.code === 'auth/weak-password') {
+                    Alert.alert('Weak password', 'Password should be at least 6 characters.')
+                } else {
+                    Alert.alert('Error', err.message)
+                }
             }
         }
     }

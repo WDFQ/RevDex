@@ -1,11 +1,30 @@
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+
+// Basic email shape check: something@something.something with no spaces.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('')
+
+    const handleContinue = () => {
+        const trimmedEmail = email.trim()
+
+        // Front-end guards before the (upcoming) sign-in call.
+        if (!trimmedEmail) {
+            Alert.alert('Missing info', 'Please enter your email address.')
+            return
+        }
+        if (!EMAIL_REGEX.test(trimmedEmail)) {
+            Alert.alert('Invalid email', 'Please enter a valid email address, e.g. john@example.com.')
+            return
+        }
+
+        // TODO: sign-in logic to come later.
+    }
 
     const goToSignup = () => {
         // Sign-up is the root of the auth stack, so step back to it when possible.
@@ -49,6 +68,7 @@ export default function LoginScreen() {
                     <TouchableOpacity
                         activeOpacity={0.85}
                         className="bg-sky-200 rounded-2xl py-4 items-center mb-3"
+                        onPress={handleContinue}
                     >
                         <Text className="text-sky-900 text-base font-semibold">Continue</Text>
                     </TouchableOpacity>
