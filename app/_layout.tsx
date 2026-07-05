@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router'
+import { Stack } from 'expo-router'
 import { onAuthStateChanged, User } from 'firebase/auth'
 import { useEffect, useState } from 'react'
 import '../global.css'
@@ -19,13 +19,25 @@ export default function RootLayout() {
         return unsubscribe
     }, [])
 
+    // Keep the native splash up until we know the auth state. The root layout
+    // MUST render a navigator once ready, otherwise expo-router never mounts a
+    // screen and the splash screen hangs forever.
     if (isLoading) {
         return null
     } else {
-        if (user) {
-            return <Redirect href={'/(tabs)'} />
-        } else {
-            return <Redirect href={'/(auth)/login'} />
-        }
+        return (
+            <Stack screenOptions={{ headerShown: false }}>
+                {/* render tabs if user is not null */}
+                <Stack.Protected guard={user !== null}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="CameraScreen" />
+                    <Stack.Screen name="CaptureCardScreen" />
+                </Stack.Protected>
+                {/* render auth section if no user */}
+                <Stack.Protected guard={user === null}>
+                    <Stack.Screen name="(auth)" />
+                </Stack.Protected>
+            </Stack>
+        )
     }
 }

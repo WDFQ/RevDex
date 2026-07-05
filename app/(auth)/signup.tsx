@@ -29,8 +29,9 @@ export default function SignupScreen() {
                 creationDate: date.toLocaleDateString(),
             })
         } catch (err) {
+            console.error(err)
             if (err instanceof FirebaseError) {
-                Alert.alert('Err', err.message)
+                Alert.alert('Error', err.message)
             }
         }
     }
@@ -43,9 +44,7 @@ export default function SignupScreen() {
                     <View className="items-center mb-8">
                         <Text className="text-sky-300 text-2xl font-bold tracking-widest mb-6">RevDex</Text>
                         <Text className="text-white text-3xl font-bold tracking-tight mb-2">Join the Hunt</Text>
-                        <Text className="text-neutral-400 text-sm text-center leading-5 max-w-xs">
-                            Spot, capture, and collect the world's most exclusive supercars. Your digital garage awaits.
-                        </Text>
+                        <Text className="text-neutral-400 text-sm text-center leading-5 max-w-xs">Every car you spot is yours to keep. Your digital garage awaits.</Text>
                     </View>
 
                     {/* Email field */}
