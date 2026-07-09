@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons'
-import * as FileSystem from 'expo-file-system/legacy'
+import { File } from 'expo-file-system'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -140,24 +140,14 @@ export default function CaptureCardScreen() {
     const [selectedCarIndex, setSelectedCarIndex] = useState(0)
     const [showMultipleCarsToast, setShowMultipleCarsToast] = useState(false)
 
-    // Auto-dismiss the "multiple cars" banner after 3.5 seconds.
-    useEffect(() => {
-        if (!showMultipleCarsToast) {
-            return
-        }
-        const dismissTimer = setTimeout(() => setShowMultipleCarsToast(false), 3500)
-        return () => clearTimeout(dismissTimer)
-    }, [showMultipleCarsToast])
-
     async function handleContinuePress() {
         Keyboard.dismiss()
         setStatus('analyzing')
 
         try {
             // Read the photo from local cache and convert it to base64 for the API.
-            const base64Image = await FileSystem.readAsStringAsync(photoUri, {
-                encoding: FileSystem.EncodingType.Base64,
-            })
+            const photoFile = new File(photoUri)
+            const base64Image = await photoFile.base64()
 
             const identification = await requestCarIdentification(base64Image, hintText)
 
