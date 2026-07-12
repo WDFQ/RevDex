@@ -13,7 +13,10 @@ type CarConfidence = 'high' | 'medium' | 'low'
 type DetectedCar = {
     make: string | null
     model: string | null
-    year: string | null
+    // Always a span (e.g. "2016–2019"), never a single model year — see buildIdentificationPrompt.
+    yearRange: string | null
+    // Two short sentences about the car, shown as notes on the capture card.
+    description: string | null
     confidence: CarConfidence
 }
 
@@ -29,14 +32,21 @@ function buildIdentificationPrompt(userHint: string): string {
         'You are identifying cars for a car-spotting app. ' +
         'List EVERY distinct car visible in this photo, ordered by prominence: ' +
         'the largest, closest, or most centered car first.\n\n' +
-        'For each car, give the make, model, and year (or year range) when you can actually tell.\n\n' +
+        'For each car, give the make, model, and a year range when you can actually tell. ' +
+        'The yearRange must ALWAYS be a span (for example "2016–2019" or "2018–2021"), normally the ' +
+        "car's generation or production years — never a single model year, even when you feel confident " +
+        'about the exact year.\n\n' +
+        'Also write a description of exactly two sentences about this specific car: what it is and ' +
+        'something notable about the model, its era, or what is visible in the photo. Keep it factual ' +
+        'and enthusiast-toned. If you cannot identify the car, still describe what you can see in two ' +
+        'sentences (for example body style, colour, and why it is hard to identify).\n\n' +
         'Honesty about uncertainty matters more than being helpful here. A confident wrong answer is ' +
         'worse for this app than an honest "not sure". Follow these rules:\n' +
         '- Only use "high" confidence when the make and model are clearly legible or unambiguous, ' +
         'for example visible badging or an unmistakable body shape.\n' +
         '- Readily use "medium" or "low" confidence when the car is blurry, obscured, at a bad angle, ' +
         'generic-looking, or a rare model you are genuinely unsure about.\n' +
-        '- Prefer null for make, model, or year over fabricating a plausible-sounding guess when you ' +
+        '- Prefer null for make, model, or yearRange over fabricating a plausible-sounding guess when you ' +
         'are not reasonably sure.\n' +
         'Behave like a knowledgeable but honest car enthusiast, not one that makes up specific ' +
         'answers to seem helpful.'
@@ -81,11 +91,12 @@ async function requestCarIdentification(base64Image: string, userHint: string) {
                                 properties: {
                                     make: { type: 'STRING', nullable: true },
                                     model: { type: 'STRING', nullable: true },
-                                    year: { type: 'STRING', nullable: true },
+                                    yearRange: { type: 'STRING', nullable: true },
+                                    description: { type: 'STRING', nullable: true },
                                     confidence: { type: 'STRING', enum: ['high', 'medium', 'low'] },
                                 },
                                 required: ['confidence'],
-                                propertyOrdering: ['make', 'model', 'year', 'confidence'],
+                                propertyOrdering: ['make', 'model', 'yearRange', 'description', 'confidence'],
                             },
                         },
                     },
@@ -128,17 +139,151 @@ function displayOrUnknown(value: string | null): string {
     return 'Unknown'
 }
 
+// Format the capture timestamp (ISO string) as a short, readable date like "Jul 12, 2026".
+function formatCaptureDate(isoDate: string): string {
+    if (!isoDate) {
+        return 'Unknown'
+    }
+    const parsed = new Date(isoDate)
+    if (isNaN(parsed.getTime())) {
+        return 'Unknown'
+    }
+    return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+// The result step — modelled on the Stitch "Car Details (iOS)" screen: a photo hero at the top,
+// an iOS-style grouped detail card, and a fixed action bar at the bottom.
+type IdentifiedCarViewProps = {
+    photoUri: string
+    cars: DetectedCar[]
+    selectedIndex: number
+    // Photo-level capture metadata, shared across every detected car.
+    capturedAt: string
+    onSelectCar: (carIndex: number) => void
+    onEditHint: () => void
+    onRetake: () => void
+    onAddToGarage: () => void
+}
+
+function IdentifiedCarView({ photoUri, cars, selectedIndex, capturedAt, onSelectCar, onEditHint, onRetake, onAddToGarage }: IdentifiedCarViewProps) {
+    const selectedCar = cars[selectedIndex]
+    const hasMultipleCars = cars.length > 1
+
+    return (
+        <SafeAreaView className="flex-1 bg-neutral-950" edges={['top', 'bottom']}>
+            {/* Top navigation bar — back returns to the hint step to refine and re-identify */}
+            <View className="flex-row items-center h-14 px-2 border-b border-neutral-800">
+                <TouchableOpacity activeOpacity={0.7} onPress={onEditHint} className="w-10 h-10 items-center justify-center">
+                    <Ionicons name="chevron-back" size={26} color="#38bdf8" />
+                </TouchableOpacity>
+                <Text className="flex-1 text-white text-base font-semibold text-center">Spot Details</Text>
+                <View className="w-10 h-10" />
+            </View>
+
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 24 }}>
+                {/* Photo hero */}
+                <Image source={{ uri: photoUri }} className="w-full h-72" resizeMode="cover" />
+
+                {/* Car selector bar — only when the photo has more than one car */}
+                {hasMultipleCars && (
+                    <View className="px-6 pt-4">
+                        <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-2">{cars.length} cars detected</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                            {cars.map((car, carIndex) => {
+                                const isSelected = carIndex === selectedIndex
+                                return (
+                                    <TouchableOpacity
+                                        key={carIndex}
+                                        activeOpacity={0.7}
+                                        onPress={() => onSelectCar(carIndex)}
+                                        className={isSelected ? 'bg-sky-200 rounded-full px-4 py-2' : 'bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2'}
+                                    >
+                                        <Text className={isSelected ? 'text-sky-900 text-sm font-semibold' : 'text-white text-sm font-semibold'}>
+                                            {getCarPillLabel(car, carIndex)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )
+                            })}
+                        </ScrollView>
+                    </View>
+                )}
+
+                {/* Grouped detail card (iOS settings style): rows split by dividers */}
+                <View className="mx-6 mt-4 bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden">
+                    <View className="p-4 border-b border-neutral-800">
+                        <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Make</Text>
+                        <Text className="text-white text-xl font-semibold">{displayOrUnknown(selectedCar.make)}</Text>
+                    </View>
+                    <View className="p-4 border-b border-neutral-800">
+                        <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Model</Text>
+                        <Text className="text-white text-xl font-semibold">{displayOrUnknown(selectedCar.model)}</Text>
+                    </View>
+                    <View className="flex-row border-b border-neutral-800">
+                        <View className="flex-1 p-4 border-r border-neutral-800">
+                            <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Years</Text>
+                            <View className="flex-row items-center gap-1.5">
+                                <Ionicons name="time-outline" size={16} color="#38bdf8" />
+                                <Text className="text-white text-base">{displayOrUnknown(selectedCar.yearRange)}</Text>
+                            </View>
+                        </View>
+                        <View className="flex-1 p-4">
+                            <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Confidence</Text>
+                            <View className="flex-row items-center gap-1.5">
+                                <Ionicons name="ribbon-outline" size={16} color="#38bdf8" />
+                                <Text className="text-white text-base capitalize">{selectedCar.confidence}</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Photo capture date, read from the photo's own EXIF metadata */}
+                    <View className="p-4 border-b border-neutral-800">
+                        <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Capture Date</Text>
+                        <View className="flex-row items-center gap-1.5">
+                            <Ionicons name="calendar-outline" size={16} color="#38bdf8" />
+                            <Text className="text-white text-base">{formatCaptureDate(capturedAt)}</Text>
+                        </View>
+                    </View>
+
+                    {/* Two-sentence AI description */}
+                    <View className="p-4">
+                        <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Notes</Text>
+                        <Text className="text-neutral-300 text-sm leading-5">{displayOrUnknown(selectedCar.description)}</Text>
+                    </View>
+
+                    {selectedCar.confidence === 'low' && (
+                        <View className="flex-row items-center gap-1.5 p-4 border-t border-neutral-800">
+                            <Ionicons name="help-circle-outline" size={14} color="#a3a3a3" />
+                            <Text className="text-neutral-400 text-xs flex-1">Unconfirmed — double-check this one before saving.</Text>
+                        </View>
+                    )}
+                </View>
+            </ScrollView>
+
+            {/* Fixed action bar */}
+            <View className="flex-row items-center gap-3 px-6 pt-3 border-t border-neutral-800">
+                <TouchableOpacity activeOpacity={0.7} onPress={onRetake} className="w-14 h-14 bg-neutral-900 border border-neutral-800 rounded-2xl items-center justify-center">
+                    <Ionicons name="camera-outline" size={22} color="#ffffff" />
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.85} onPress={onAddToGarage} className="flex-1 bg-sky-200 rounded-2xl py-4 items-center">
+                    <Text className="text-sky-900 text-base font-semibold">Add to Garage</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    )
+}
+
 export default function CaptureCardScreen() {
     const router = useRouter()
-    const { imageUri } = useLocalSearchParams()
-    // The camera screen always passes a single uri, but route params are typed string | string[].
+    const { imageUri, capturedAt } = useLocalSearchParams()
+    // The camera and home screens always pass single strings, but route params are typed string | string[].
     const photoUri = String(imageUri)
+    // Read from the photo's own EXIF data by both the camera and upload flows; '' if the photo has none.
+    const capturedAtIso = capturedAt ? String(capturedAt) : ''
 
     const [status, setStatus] = useState<ScreenStatus>('hint')
     const [hintText, setHintText] = useState('')
     const [detectedCars, setDetectedCars] = useState<DetectedCar[]>([])
     const [selectedCarIndex, setSelectedCarIndex] = useState(0)
-    const [showMultipleCarsToast, setShowMultipleCarsToast] = useState(false)
 
     async function handleContinuePress() {
         Keyboard.dismiss()
@@ -158,9 +303,6 @@ export default function CaptureCardScreen() {
 
             setDetectedCars(identification.cars)
             setSelectedCarIndex(0)
-            if (identification.cars.length > 1) {
-                setShowMultipleCarsToast(true)
-            }
             setStatus('result')
         } catch (error) {
             // console.log instead of console.error so a handled failure doesn't open the redbox.
@@ -169,23 +311,43 @@ export default function CaptureCardScreen() {
         }
     }
 
-    function handleTryAgainPress() {
+    function handleReturnToHint() {
         // Return to the hint step with a clean slate so we never show stale results.
+        // The hint text is kept so the user can tweak it and re-identify.
         setDetectedCars([])
         setSelectedCarIndex(0)
-        setShowMultipleCarsToast(false)
         setStatus('hint')
+    }
+
+    function handleBackToHome() {
+        // Jump straight back to the Home tab, dismissing the camera step in between.
+        router.dismissTo('/')
     }
 
     function handleAddToGaragePress() {
         // TODO: save the selected car to Firestore.
     }
 
-    const selectedCar = detectedCars[selectedCarIndex]
+    // The result step is a full, distinct layout (photo hero + grouped card), so it renders on its own.
+    if (status === 'result' && detectedCars[selectedCarIndex]) {
+        return (
+            <IdentifiedCarView
+                photoUri={photoUri}
+                cars={detectedCars}
+                selectedIndex={selectedCarIndex}
+                capturedAt={capturedAtIso}
+                onSelectCar={setSelectedCarIndex}
+                onEditHint={handleBackToHome}
+                onRetake={() => router.back()}
+                onAddToGarage={handleAddToGaragePress}
+            />
+        )
+    }
 
+    // The hint, analyzing and error steps all overlay the captured photo.
     return (
         <View className="flex-1 bg-neutral-950">
-            {/* Captured photo as the full-screen background for every step */}
+            {/* Captured photo as the full-screen background */}
             <Image source={{ uri: photoUri }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
 
             {/* Full-screen dim layers, outside the safe area so they cover the whole photo */}
@@ -196,12 +358,19 @@ export default function CaptureCardScreen() {
                     <Text className="text-white text-base font-semibold">Identifying your car...</Text>
                 </View>
             )}
-            {(status === 'error' || status === 'result') && <View className="absolute inset-0 bg-black/60" />}
+            {status === 'error' && <View className="absolute inset-0 bg-black/60" />}
 
             <SafeAreaView className="flex-1">
                 {/* ---- Step 1: optional hint ---- */}
                 {status === 'hint' && (
                     <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                        {/* Back arrow returns to the Home tab, skipping the camera step */}
+                        <View className="flex-row items-center h-14 px-2">
+                            <TouchableOpacity activeOpacity={0.7} onPress={handleBackToHome} className="w-10 h-10 items-center justify-center">
+                                <Ionicons name="chevron-back" size={26} color="#ffffff" />
+                            </TouchableOpacity>
+                        </View>
+
                         {/* Empty area above the card; tapping it dismisses the keyboard */}
                         <Pressable className="flex-1" onPress={Keyboard.dismiss} />
 
@@ -231,82 +400,10 @@ export default function CaptureCardScreen() {
                             <Ionicons name="alert-circle-outline" size={40} color="#737373" />
                             <Text className="text-white text-lg font-bold mt-3 mb-1 text-center">Couldn't identify a car in that photo.</Text>
                             <Text className="text-neutral-400 text-sm text-center mb-5">Try adding a hint, or retake the photo with the car more visible.</Text>
-                            <TouchableOpacity activeOpacity={0.85} className="bg-sky-200 rounded-2xl py-4 items-center w-full" onPress={handleTryAgainPress}>
+                            <TouchableOpacity activeOpacity={0.85} className="bg-sky-200 rounded-2xl py-4 items-center w-full" onPress={handleReturnToHint}>
                                 <Text className="text-sky-900 text-base font-semibold">Try Again</Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
-                )}
-
-                {/* ---- Step 4: results ---- */}
-                {status === 'result' && selectedCar && (
-                    <View className="flex-1 justify-end">
-                        <View className="mx-4 mb-4">
-                            {/* Car selector pills — only when more than one car was detected */}
-                            {detectedCars.length > 1 && (
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3" contentContainerStyle={{ gap: 8 }}>
-                                    {detectedCars.map((car, carIndex) => {
-                                        const isSelected = carIndex === selectedCarIndex
-                                        return (
-                                            <TouchableOpacity
-                                                key={carIndex}
-                                                activeOpacity={0.7}
-                                                onPress={() => setSelectedCarIndex(carIndex)}
-                                                className={isSelected ? 'bg-sky-200 rounded-full px-4 py-2' : 'bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2'}
-                                            >
-                                                <Text className={isSelected ? 'text-sky-900 text-sm font-semibold' : 'text-white text-sm font-semibold'}>
-                                                    {getCarPillLabel(car, carIndex)}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        )
-                                    })}
-                                </ScrollView>
-                            )}
-
-                            {/* Selected car details */}
-                            <View className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden mb-3">
-                                <View className="p-4 border-b border-neutral-800">
-                                    <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Make</Text>
-                                    <Text className="text-white text-xl font-semibold">{displayOrUnknown(selectedCar.make)}</Text>
-                                </View>
-                                <View className="p-4 border-b border-neutral-800">
-                                    <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Model</Text>
-                                    <Text className="text-white text-xl font-semibold">{displayOrUnknown(selectedCar.model)}</Text>
-                                </View>
-                                <View className="flex-row">
-                                    <View className="flex-1 p-4 border-r border-neutral-800">
-                                        <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Year</Text>
-                                        <Text className="text-white text-base">{displayOrUnknown(selectedCar.year)}</Text>
-                                    </View>
-                                    <View className="flex-1 p-4">
-                                        <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Confidence</Text>
-                                        <Text className="text-white text-base capitalize">{selectedCar.confidence}</Text>
-                                    </View>
-                                </View>
-                                {selectedCar.confidence === 'low' && (
-                                    <View className="flex-row items-center gap-1.5 px-4 pb-3">
-                                        <Ionicons name="help-circle-outline" size={14} color="#a3a3a3" />
-                                        <Text className="text-neutral-400 text-xs">Unconfirmed — double-check this one before saving.</Text>
-                                    </View>
-                                )}
-                            </View>
-
-                            {/* Actions */}
-                            <TouchableOpacity activeOpacity={0.85} className="bg-sky-200 rounded-2xl py-4 items-center mb-3" onPress={handleAddToGaragePress}>
-                                <Text className="text-sky-900 text-base font-semibold">Add to Garage</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.7} className="bg-neutral-900 border border-neutral-800 rounded-2xl py-4 items-center" onPress={() => router.back()}>
-                                <Text className="text-white text-base font-semibold">Retake Photo</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
-
-                {/* Multiple-cars toast — rendered last so it sits on top */}
-                {showMultipleCarsToast && (
-                    <View className="absolute top-4 left-5 right-5 bg-neutral-900 border border-neutral-800 rounded-2xl px-4 py-3 flex-row items-center gap-2">
-                        <Ionicons name="information-circle-outline" size={18} color="#38bdf8" />
-                        <Text className="text-white text-sm flex-1">Multiple cars detected — select the desired car below</Text>
                     </View>
                 )}
             </SafeAreaView>

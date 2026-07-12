@@ -1,10 +1,31 @@
 import { Ionicons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
 import { router } from 'expo-router'
 import { Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Header from '../../components/Header'
+import { parseExifCapturedAt } from '../../utils/exif'
 
 export default function HomeScreen() {
+    async function pickExistingPhoto() {
+        // The system photo picker doesn't need library permissions, so we launch it directly.
+        // exif: true so we can read the photo's own capture date instead of guessing.
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 1,
+            exif: true,
+        })
+
+        if (result.canceled) {
+            return
+        }
+
+        const asset = result.assets[0]
+        const capturedAt = parseExifCapturedAt(asset.exif)
+
+        router.push({ pathname: '/CaptureCardScreen', params: { imageUri: asset.uri, capturedAt } })
+    }
+
     return (
         <SafeAreaView className="flex-1 bg-neutral-950">
             <Header />
@@ -34,7 +55,7 @@ export default function HomeScreen() {
             <View className="flex-1 items-center justify-center gap-6">
                 <View className="items-center gap-2">
                     <Text className="text-white text-xl font-semibold">Ready to Snap?</Text>
-                    <Text className="text-neutral-500 text-sm">Focus. Capture. Earn Rep.</Text>
+                    <Text className="text-neutral-500 text-sm">Time to garage your dream cars.</Text>
                 </View>
 
                 <TouchableOpacity
@@ -47,6 +68,15 @@ export default function HomeScreen() {
                 </TouchableOpacity>
 
                 <Text className="text-neutral-600 text-xs tracking-widest font-medium">TAP TO OPEN LENS</Text>
+
+                <TouchableOpacity
+                    className="flex-row items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-2xl py-4 px-6"
+                    activeOpacity={0.7}
+                    onPress={pickExistingPhoto}
+                >
+                    <Ionicons name="image-outline" size={20} color="#ffffff" />
+                    <Text className="text-white font-semibold">Upload a photo</Text>
+                </TouchableOpacity>
             </View>
         </SafeAreaView>
     )
