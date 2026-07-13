@@ -33,6 +33,7 @@ export default function LensScreen() {
             return
         }
 
+        // get uri and timestamp and pass into capture card
         const asset = result.assets[0]
         const capturedAt = parseExifCapturedAt(asset.exif)
         router.replace({ pathname: '/CaptureCardScreen', params: { imageUri: asset.uri, capturedAt } })
