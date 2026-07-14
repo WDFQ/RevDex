@@ -27,16 +27,22 @@ export default function RootLayout() {
     } else {
         return (
             <Stack screenOptions={{ headerShown: false }}>
-                {/* render tabs if user is not null */}
-                <Stack.Protected guard={user !== null}>
+                <Stack.Protected guard={user === null}>
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="CameraScreen" />
                     <Stack.Screen name="CaptureCardScreen" />
                 </Stack.Protected>
+
+                {/* render tabs if user is not null */}
+                {/* <Stack.Protected guard={user !== null}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="CameraScreen" />
+                    <Stack.Screen name="CaptureCardScreen" />
+                </Stack.Protected> */}
                 {/* render auth section if no user */}
-                <Stack.Protected guard={user === null}>
+                {/* <Stack.Protected guard={user === null}>
                     <Stack.Screen name="(auth)" />
-                </Stack.Protected>
+                </Stack.Protected> */}
             </Stack>
         )
     }

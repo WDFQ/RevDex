@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons'
-import { useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
-import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Image, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import HintStep from '../components/HintStep'
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent'
 
@@ -97,11 +97,11 @@ async function requestCarIdentification(base64Image: string, userHint: string) {
     return JSON.parse(resultText)
 }
 
-export default function CaptureCardScreen() {
-    type screenStatus = 'hint' | 'loading' | 'error' | 'result'
+function goBack() {}
 
+export default function CaptureCardScreen() {
     const [userHintText, setUserHintText] = useState('')
-    // start the status on hint for user hint
+    // start the status on hint for user hint states: (error, hint, result, loading)
     const [appStatus, setAppStatus] = useState('hint')
 
     // get photo passed from camera screen
@@ -124,35 +124,18 @@ export default function CaptureCardScreen() {
             {/* Visible content — inside SafeAreaView, so it avoids the notch/home indicator */}
             <SafeAreaView className="flex-1">
                 {appStatus === 'hint' ? (
-                    <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                        <View className="flex-row items-center h-14 px-2">
-                            <TouchableOpacity activeOpacity={0.7} className="w-10 h-10 items-center justify-center">
-                                <Ionicons name="chevron-back" size={26} color="#ffffff" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <Pressable className="flex-1" onPress={Keyboard.dismiss} />
-
-                        <View className="bg-neutral-900 border border-neutral-800 rounded-2xl mx-4 mb-4 p-5">
-                            <Text className="text-white text-xl font-bold mb-1">Anything we should know?</Text>
-                            <Text className="text-neutral-400 text-sm mb-4">Optional — a small hint can help identify the car.</Text>
-                            <TextInput
-                                value={userHintText}
-                                onChangeText={setUserHintText}
-                                placeholder={'e.g. "has a body kit", "badge says Alpine", "the car in the back is a WRX"'}
-                                placeholderTextColor="#525252"
-                                multiline
-                                className="bg-neutral-950 border border-neutral-800 rounded-2xl text-white text-base p-4 mb-4"
-                                style={{ minHeight: 88, textAlignVertical: 'top' }}
-                            />
-                            <TouchableOpacity activeOpacity={0.85} className="bg-sky-200 rounded-2xl py-4 items-center" onPress={handleContinuePress}>
-                                <Text className="text-sky-900 text-base font-semibold">Continue</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </KeyboardAvoidingView>
+                    // hint card
+                    <HintStep
+                        hintText={userHintText}
+                        onHintTextChange={setUserHintText}
+                        onBack={() => {
+                            router.replace('/')
+                        }}
+                        onContinue={() => {}}
+                    />
                 ) : null}
 
-                {appStatus === 'analyzing' ? (
+                {appStatus === 'loading' ? (
                     <View className="flex-1 items-center justify-center gap-4">
                         <ActivityIndicator size="large" color="#bae6fd" />
                         <Text className="text-white text-base font-semibold">Identifying your car...</Text>

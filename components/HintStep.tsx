@@ -1,4 +1,14 @@
-export default function HintStep({ hintText, onHintTextChange, onBack, onContinue }) {
+import { Ionicons } from '@expo/vector-icons'
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native'
+
+type HintStepProps = {
+    hintText: string
+    onHintTextChange: (text: string) => void
+    onBack: () => void
+    onContinue: () => void
+}
+
+export default function HintStep({ hintText, onHintTextChange, onBack, onContinue }: HintStepProps) {
     return (
         <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View className="flex-row items-center h-14 px-2">
