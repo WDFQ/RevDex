@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
-import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent'
@@ -98,35 +98,41 @@ async function requestCarIdentification(base64Image: string, userHint: string) {
 }
 
 export default function CaptureCardScreen() {
+    type screenStatus = 'hint' | 'loading' | 'error' | 'result'
+
     const [userHintText, setUserHintText] = useState('')
+    // start the status on hint for user hint
+    const [appStatus, setAppStatus] = useState('hint')
 
     // get photo passed from camera screen
     const { imageUri, capturedAt } = useLocalSearchParams()
     const photoUri = String(imageUri)
     const capturedAtData = capturedAt ? String(capturedAt) : ''
 
+    // make capture data useable as a regular readable string
+    const dateObj = new Date(capturedAtData).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+
     return (
         <View className="flex-1 bg-neutral-950">
-            {/* Captured photo as the full-screen background */}
+            {/* Photo background — always rendered, sits behind everything */}
             <Image source={{ uri: photoUri }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
 
-            {/* Dark dim layer over the photo, just for the hint step */}
-            {status === 'hint' && <View className="absolute inset-0 bg-black/40" />}
+            {/* Dim layers — outside SafeAreaView, so they cover the true screen edges */}
+            {appStatus === 'hint' ? <View className="absolute inset-0 bg-black/40" /> : null}
+            {appStatus === 'analyzing' ? <View className="absolute inset-0 bg-black/70" /> : null}
 
+            {/* Visible content — inside SafeAreaView, so it avoids the notch/home indicator */}
             <SafeAreaView className="flex-1">
-                {status === 'hint' && (
+                {appStatus === 'hint' ? (
                     <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                        {/* Back arrow, top-left */}
                         <View className="flex-row items-center h-14 px-2">
                             <TouchableOpacity activeOpacity={0.7} className="w-10 h-10 items-center justify-center">
                                 <Ionicons name="chevron-back" size={26} color="#ffffff" />
                             </TouchableOpacity>
                         </View>
 
-                        {/* Empty space above the card — tapping it dismisses the keyboard */}
                         <Pressable className="flex-1" onPress={Keyboard.dismiss} />
 
-                        {/* The hint card itself, pinned to the bottom */}
                         <View className="bg-neutral-900 border border-neutral-800 rounded-2xl mx-4 mb-4 p-5">
                             <Text className="text-white text-xl font-bold mb-1">Anything we should know?</Text>
                             <Text className="text-neutral-400 text-sm mb-4">Optional — a small hint can help identify the car.</Text>
@@ -139,12 +145,19 @@ export default function CaptureCardScreen() {
                                 className="bg-neutral-950 border border-neutral-800 rounded-2xl text-white text-base p-4 mb-4"
                                 style={{ minHeight: 88, textAlignVertical: 'top' }}
                             />
-                            <TouchableOpacity activeOpacity={0.85} className="bg-sky-200 rounded-2xl py-4 items-center">
+                            <TouchableOpacity activeOpacity={0.85} className="bg-sky-200 rounded-2xl py-4 items-center" onPress={handleContinuePress}>
                                 <Text className="text-sky-900 text-base font-semibold">Continue</Text>
                             </TouchableOpacity>
                         </View>
                     </KeyboardAvoidingView>
-                )}
+                ) : null}
+
+                {appStatus === 'analyzing' ? (
+                    <View className="flex-1 items-center justify-center gap-4">
+                        <ActivityIndicator size="large" color="#bae6fd" />
+                        <Text className="text-white text-base font-semibold">Identifying your car...</Text>
+                    </View>
+                ) : null}
             </SafeAreaView>
         </View>
     )
