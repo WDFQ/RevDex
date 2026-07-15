@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
-import { ActivityIndicator, Image, Text, View } from 'react-native'
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import HintStep from '../components/HintStep'
 
@@ -92,12 +93,10 @@ async function requestCarIdentification(base64Image: string, userHint: string) {
     }
 
     const responseJson = await response.json()
-    // Gemini returns the structured JSON as a text part; parse it into our result shape.
+    // gets relevant json part (.text is the string version of the json object with shape defined above)
     const resultText = responseJson.candidates[0].content.parts[0].text
     return JSON.parse(resultText)
 }
-
-function goBack() {}
 
 export default function CaptureCardScreen() {
     const [userHintText, setUserHintText] = useState('')
@@ -112,6 +111,16 @@ export default function CaptureCardScreen() {
     // make capture data useable as a regular readable string
     const dateObj = new Date(capturedAtData).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
+    // clicked when user wishes to proceed
+    function hintStepContinueBtn() {
+        // call gemini and get response
+        const result = requestCarIdentification(photoUri, userHintText)
+
+        // render result page and data
+
+        setAppStatus('result')
+    }
+
     return (
         <View className="flex-1 bg-neutral-950">
             {/* Photo background — always rendered, sits behind everything */}
@@ -119,29 +128,69 @@ export default function CaptureCardScreen() {
 
             {/* Dim layers — outside SafeAreaView, so they cover the true screen edges */}
             {appStatus === 'hint' ? <View className="absolute inset-0 bg-black/40" /> : null}
-            {appStatus === 'analyzing' ? <View className="absolute inset-0 bg-black/70" /> : null}
+            {appStatus === 'loading' ? <View className="absolute inset-0 bg-black/70" /> : null}
 
-            {/* Visible content — inside SafeAreaView, so it avoids the notch/home indicator */}
-            <SafeAreaView className="flex-1">
-                {appStatus === 'hint' ? (
-                    // hint card
-                    <HintStep
-                        hintText={userHintText}
-                        onHintTextChange={setUserHintText}
-                        onBack={() => {
-                            router.replace('/')
-                        }}
-                        onContinue={() => {}}
-                    />
-                ) : null}
-
-                {appStatus === 'loading' ? (
-                    <View className="flex-1 items-center justify-center gap-4">
-                        <ActivityIndicator size="large" color="#bae6fd" />
-                        <Text className="text-white text-base font-semibold">Identifying your car...</Text>
+            {/* render result when states change to 'result */}
+            {appStatus === 'result' ? (
+                <SafeAreaView className="flex-1 bg-neutral-950" edges={['top', 'bottom']}>
+                    {/* Top bar */}
+                    <View className="flex-row items-center h-14 px-2 border-b border-neutral-800">
+                        <TouchableOpacity activeOpacity={0.7} onPress={() => setAppStatus('hint')} className="w-10 h-10 items-center justify-center">
+                            <Ionicons name="chevron-back" size={26} color="#38bdf8" />
+                        </TouchableOpacity>
+                        <Text className="flex-1 text-white text-base font-semibold text-center">Spot Details</Text>
+                        <View className="w-10 h-10" />
                     </View>
-                ) : null}
-            </SafeAreaView>
+
+                    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 24 }}>
+                        {/* Photo hero */}
+                        <Image source={{ uri: photoUri }} className="w-full h-72" resizeMode="cover" />
+
+                        {/* Grouped detail card */}
+                        <View className="mx-6 mt-4 bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden">
+                            <View className="p-4 border-b border-neutral-800">
+                                <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Make</Text>
+                                <Text className="text-white text-xl font-semibold">{}</Text>
+                            </View>
+                            <View className="p-4 border-b border-neutral-800">
+                                <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Model</Text>
+                                <Text className="text-white text-xl font-semibold">{}</Text>
+                            </View>
+                            <View className="flex-row border-b border-neutral-800">
+                                <View className="flex-1 p-4 border-r border-neutral-800">
+                                    <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Years</Text>
+                                    <Text className="text-white text-base">{}</Text>
+                                </View>
+                                <View className="flex-1 p-4">
+                                    <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Confidence</Text>
+                                    <Text className="text-white text-base capitalize">{}</Text>
+                                </View>
+                            </View>
+                            <View className="p-4">
+                                <Text className="text-neutral-500 text-xs uppercase tracking-wider mb-1">Notes</Text>
+                                <Text className="text-neutral-300 text-sm leading-5">{}</Text>
+                            </View>
+                        </View>
+                    </ScrollView>
+
+                    {/* Fixed action bar */}
+                    <View className="flex-row items-center gap-3 px-6 pt-3 border-t border-neutral-800">{/* ...unchanged... */}</View>
+                </SafeAreaView>
+            ) : (
+                // render the hint or loading step if not on result
+                <SafeAreaView className="flex-1">
+                    {appStatus === 'hint' ? (
+                        <HintStep hintText={userHintText} onHintTextChange={setUserHintText} onBack={() => router.replace('/')} onContinue={hintStepContinueBtn} />
+                    ) : null}
+
+                    {appStatus === 'loading' ? (
+                        <View className="flex-1 items-center justify-center gap-4">
+                            <ActivityIndicator size="large" color="#bae6fd" />
+                            <Text className="text-white text-base font-semibold">Identifying your car...</Text>
+                        </View>
+                    ) : null}
+                </SafeAreaView>
+            )}
         </View>
     )
 }
