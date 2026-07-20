@@ -45,5 +45,3 @@ example
 # generated native folders
 /ios
 /android
-
-nativewind-env.d.ts
