@@ -3,10 +3,29 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { CarSpecInfo } from '../components/CarSpecInfo'
 import HintStep from '../components/HintStep'
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent'
 
+type ResultShape = {
+    carsDetected: number
+    cars: carShape[]
+}
+
+type carShape = {
+    make: string | null
+    model: string | null
+    yearRange: string | null
+    description: string | null
+    confidence: 'high' | 'medium' | 'low'
+}
+
+/**
+ * Formats the prompt and includes user's hint within
+ * @param userHint the user's hint to add onto the prompt about their photo
+ * @returns the formatted prompt
+ */
 function buildIdentificationPrompt(userHint: string): string {
     let prompt =
         'You are identifying cars for a car-spotting app. ' +
@@ -112,6 +131,8 @@ export default function CaptureCardScreen() {
     const [userHintText, setUserHintText] = useState('')
     // start the status on hint for user hint states: (error, hint, result, loading)
     const [appStatus, setAppStatus] = useState('hint')
+    const [result, setResult] = useState<ResultShape>()
+    const [selectedCarIndex, setSelectedCarIndex] = useState(0)
 
     // get photo passed from camera screen
     const { imageUri, capturedAt } = useLocalSearchParams()
@@ -121,13 +142,18 @@ export default function CaptureCardScreen() {
     // make capture data useable as a regular readable string
     const dateObj = new Date(capturedAtData).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
-    // clicked when user wishes to proceed
-    function hintStepContinueBtn() {
-        // call gemini and get response
-        const result = requestCarIdentification(photoUri, userHintText)
+    /**
+     * clicked when the user wishes to proceed from hint screen
+     */
+    async function hintStepContinueBtn() {
+        // call gemini and get the list of cars
+        const result: ResultShape = await requestCarIdentification(photoUri, userHintText)
 
-        // render result page and data
-        setAppStatus('result')
+        if (!result) {
+            setAppStatus('error')
+        } else {
+            setAppStatus('result')
+        }
     }
 
     // jsx for different capture card states
@@ -141,7 +167,7 @@ export default function CaptureCardScreen() {
             {appStatus === 'loading' ? <View className="absolute inset-0 bg-black/70" /> : null}
 
             {/* render result when states change to 'result */}
-            {appStatus === 'result' ? (
+            {appStatus === 'result' && result?.cars[0] ? (
                 <SafeAreaView className="flex-1 bg-neutral-950" edges={['top', 'bottom']}>
                     {/* Top bar */}
                     <View className="flex-row items-center h-14 px-2 border-b border-neutral-800">
@@ -156,8 +182,37 @@ export default function CaptureCardScreen() {
                         {/* Photo hero */}
                         <Image source={{ uri: photoUri }} className="w-full h-72" resizeMode="cover" />
 
-                        {/* Grouped detail card */}
-                        <CarSpecInfo></CarSpecInfo>
+                        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 24 }}>
+                            <Image source={{ uri: photoUri }} className="w-full h-72" resizeMode="cover" />
+
+                            {result.cars.length > 1 ? (
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} className="px-6 mt-4 mb-2">
+                                    {result.cars.map((car, index) => {
+                                        const isSelected = index === selectedCarIndex
+                                        const label = car.make && car.model ? `${car.make} ${car.model}` : `Car ${index + 1}`
+                                        return (
+                                            <TouchableOpacity
+                                                key={index}
+                                                activeOpacity={0.7}
+                                                onPress={() => setSelectedCarIndex(index)}
+                                                className={isSelected ? 'bg-sky-200 rounded-full px-4 py-2' : 'bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2'}
+                                            >
+                                                <Text className={isSelected ? 'text-sky-900 text-sm font-semibold' : 'text-white text-sm font-semibold'}>{label}</Text>
+                                            </TouchableOpacity>
+                                        )
+                                    })}
+                                </ScrollView>
+                            ) : null}
+
+                            <CarSpecInfo
+                                make={result.cars[selectedCarIndex].make}
+                                model={result.cars[selectedCarIndex].model}
+                                years={result.cars[selectedCarIndex].yearRange}
+                                confidence={result.cars[selectedCarIndex].confidence}
+                                notes={result.cars[selectedCarIndex].description}
+                                time={dateObj}
+                            />
+                        </ScrollView>
                     </ScrollView>
 
                     {/* Fixed action bar */}
